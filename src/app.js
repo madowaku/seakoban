@@ -2,8 +2,12 @@ import {LEVELS} from './levels.js';
 import {createState,move} from './engine.js';
 import {solveLevel} from './solver.js';
 const $=id=>document.getElementById(id),board=$('board'),storage='seakoban-v01';
+const TOTAL=LEVELS.length;
 let progress={unlocked:1,cleared:[],best:{},sound:false};
 try{progress={...progress,...JSON.parse(localStorage.getItem(storage)||'{}')};}catch{}
+// Existing players who finished the first voyage can start the new stages immediately.
+if(progress.cleared.includes(10))progress.unlocked=Math.max(progress.unlocked,11);
+progress.unlocked=Math.max(1,Math.min(TOTAL,progress.unlocked));
 function save(){try{localStorage.setItem(storage,JSON.stringify(progress));}catch{}}
 let idx=0,level=LEVELS[0],state=createState(level),history=[],busy=false,cargos=new Map(),boat,timeout,audio;
 const boatSVG=`<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="52" rx="27" ry="6" fill="#035773" opacity=".3"/><path d="M8 38H56L49 53Q31 58 16 53Z" fill="#ef8b52" stroke="#9d4a37" stroke-width="2"/><path d="M21 20H43L47 38H18Z" fill="#fff0d8" stroke="#435b69" stroke-width="2"/><rect x="25" y="25" width="14" height="10" rx="2" fill="#59c9dd" stroke="#48616c"/><path d="M32 20V13" stroke="#364d58" stroke-width="3"/><path d="M14 43H50" stroke="#ffe2b5" stroke-width="3"/></svg>`;
@@ -29,7 +33,7 @@ function setStage(i){
  if(i<0||i>=LEVELS.length||i+1>progress.unlocked)return;
  clearTimeout(timeout);idx=i;level=LEVELS[i];state=createState(level);history=[];busy=false;
  $('victory').hidden=true;$('selector').hidden=true;
- $('voyage').textContent=`${String(level.id).padStart(2,'0')} / 10`;
+ $('voyage').textContent=`${String(level.id).padStart(2,'0')} / ${TOTAL}`;
  $('title').textContent=level.title;$('lesson').textContent=level.lesson;
  rebuild();draw();announce(`ステージ${level.id}、${level.title}`);
 }
@@ -52,10 +56,10 @@ function step(direction){
 }
 function complete(){
  progress.cleared=[...new Set([...progress.cleared,level.id])];progress.best[level.id]=Math.min(progress.best[level.id]||Infinity,state.moves);
- progress.unlocked=Math.max(progress.unlocked,Math.min(10,level.id+1));save();
+ progress.unlocked=Math.max(progress.unlocked,Math.min(TOTAL,level.id+1));save();
  $('finished-moves').textContent=String(state.moves).padStart(2,'0');
- $('victory-title').textContent=level.id===10?'ALL CLEAR!':'係留完了！';
- $('next').textContent=level.id===10?'STAGESへ戻る →':'NEXT VOYAGE →';
+ $('victory-title').textContent=level.id===TOTAL?'ALL CLEAR!':'係留完了！';
+ $('next').textContent=level.id===TOTAL?'STAGESへ戻る →':'NEXT VOYAGE →';
  $('victory').hidden=false;$('next').focus();sound(780,.3);
 }
 function undo(){if(busy||!history.length)return;$('victory').hidden=true;state=history.pop();draw();announce('一手戻しました');}
@@ -71,7 +75,7 @@ function choose(){
 }
 $('undo').onclick=undo;$('retry').onclick=()=>setStage(idx);$('again').onclick=()=>setStage(idx);
 $('stages').onclick=choose;$('close').onclick=()=>{$('selector').hidden=true;};
-$('next').onclick=()=>{if(idx===9){$('victory').hidden=true;choose();}else setStage(idx+1);};
+$('next').onclick=()=>{if(idx===TOTAL-1){$('victory').hidden=true;choose();}else setStage(idx+1);};
 $('sound').onclick=()=>{progress.sound=!progress.sound;$('sound').textContent=progress.sound?'♪ ON':'♪ OFF';save();sound(640,.1);};
 $('sound').textContent=progress.sound?'♪ ON':'♪ OFF';
 document.querySelectorAll('[data-dir]').forEach(b=>b.addEventListener('click',()=>step(b.dataset.dir)));
@@ -88,4 +92,4 @@ board.addEventListener('pointerup',e=>{if(!touch)return;const dx=e.clientX-touch
 board.addEventListener('pointercancel',()=>touch=null);
 $('selector').addEventListener('click',e=>{if(e.target===$('selector'))$('selector').hidden=true;});
 if(new URLSearchParams(location.search).has('debug')){window.SEAKOBAN_DEBUG={LEVELS,solveLevel,getState:()=>state,setStage};console.table(LEVELS.map(l=>({stage:l.id,...solveLevel(l)})).map(({stage,solved,moves,pushes,brakes})=>({stage,solved,moves,pushes,brakes})));}
-setStage(0);
+setStage(Math.min(progress.unlocked,TOTAL)-1);
