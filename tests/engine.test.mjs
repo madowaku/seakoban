@@ -15,7 +15,7 @@ test('brakes on other cargo; moored cargo is immovable',()=>{
  assert.equal(move(r.state,l,'right'),null);
 });
 test('all stages are solvable and stage 003+ use cargo brakes',()=>{
- const expected=[1,6,5,8,12,13,14,16,20,23];
+ const expected=[1,6,5,8,12,13,14,16,20,23,16,18,20,22,22,22,24,26,30,41];
  for(const [i,l] of LEVELS.entries()){
   const r=solveLevel(l);
   assert.equal(r.solved,true,`stage ${l.id}`);
